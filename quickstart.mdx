@@ -49,7 +49,7 @@ Inside the frame lives a `ScrollingFrame` (invisible scrollbar, automatic canvas
 
 ## Toggling features
 
-Every feature button uses Roblox's **RichText** system to display a colored status indicator inline with the button label. When a feature is **disabled**, the status reads <font color="#a63131">**off**</font> rendered in red (`#a63131`). When a feature is **enabled**, it switches to <font color="#39a637">**on**</font> rendered in green (`#39a637`). The button text is updated directly on each click by reassigning the button's `.Text` property — no separate status label is needed.
+Every feature button uses Roblox's **RichText** system to display a colored status indicator inline with the button label. When a feature is **disabled**, the status reads **off** in red (`#a63131`). When a feature is **enabled**, it switches to **on** in green (`#39a637`). The button text is updated directly on each click by reassigning the button's `.Text` property — no separate status label is needed.
 
 <Tip>
   If the KCSH panel disappears after your character respawns, you will need to re-execute the loader script. This is expected behavior: the `ScreenGui` is created with `ResetOnSpawn = true`, which tells Roblox to automatically destroy the GUI whenever the local player's character resets. Simply paste and execute the `loadstring` one-liner again to bring the panel back.

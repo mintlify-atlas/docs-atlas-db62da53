@@ -1,0 +1,78 @@
+---
+title: "Teleport to Any Player in the Server"
+sidebarTitle: "Player Teleport"
+description: "KCSH builds a live-updating list of all players in the server. Click a name to instantly set your HumanoidRootPart CFrame to theirs."
+---
+
+The **Player Teleport** section of KCSH auto-populates a button for every player currently in the server and updates in real time as players join or leave. No configuration is needed — just click a name and your character is instantly relocated to that player's position.
+
+---
+
+## How it works
+
+On script load, KCSH iterates `Players:GetPlayers()` and calls the internal `plrbtn(player)` helper for each result. `plrbtn` creates a button labelled with the player's `Name`, then wires up a `MouseButton1Click` handler that reads the target's `HumanoidRootPart.CFrame` and assigns it directly to your own `HumanoidRootPart.CFrame`.
+
+Two additional listeners keep the list current for the entire session:
+
+- **`Players.PlayerAdded`** — calls `plrbtn(player)` for the newcomer, adding a fresh button.
+- **`Players.PlayerRemoving`** — finds the button by `player.Name` and calls `:Destroy()` on it.
+
+### `plrbtn` function (source)
+
+```lua
+local function plrbtn(player)
+    makebutton(g, tostring(player.Name), tostring(player.Name))
+    local b = g:FindFirstChild(player.Name)
+    task.wait(0.1)
+    b.TextWrapped = true
+    b.TextSize = 15
+    b.MouseButton1Click:Connect(function()
+        local trp = player.Character.HumanoidRootPart
+        wplayer.HumanoidRootPart.CFrame = trp.CFrame
+    end)
+end
+```
+
+The `task.wait(0.1)` after button creation gives the UI a frame to parent the new instance before properties are set on it.
+
+### Initialization and live-update hooks (source)
+
+```lua
+for _, player in pairs(players:GetPlayers()) do
+    plrbtn(player)
+end
+
+players.PlayerAdded:Connect(function(player)
+    plrbtn(player)
+end)
+
+players.PlayerRemoving:Connect(function(player)
+    local b = g:FindFirstChild(player.Name)
+    b:Destroy()
+end)
+```
+
+---
+
+## Layout
+
+Player teleport buttons live inside a dedicated `Frame` named `"99"` (`g` in source), which sits at the bottom of the main `ScrollingFrame` beneath the movement buttons. The frame uses `AutomaticSize = Y` so it expands vertically to fit however many players are present.
+
+A `UIListLayout` inside the frame controls arrangement:
+
+| Property | Value |
+|----------|-------|
+| `FillDirection` | `Horizontal` |
+| `HorizontalFlex` | `Fill` |
+| `Wraps` | `true` |
+| `Padding` | `10 px` |
+
+This means buttons are placed side-by-side and automatically stretch to fill the panel width, wrapping to a new row when the row is full. Each button has `TextWrapped = true` and `TextSize = 15` so long usernames still fit within their allocated cell.
+
+---
+
+## Limitations
+
+<Note>
+  Teleportation reads `player.Character.HumanoidRootPart` directly with no nil-check. If the target player has just joined, is currently respawning, or their character has not yet loaded, `Character` or `HumanoidRootPart` may be `nil` — causing a script error. Wait a moment after a player spawns before attempting to teleport to them.
+</Note>

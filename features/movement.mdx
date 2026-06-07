@@ -1,0 +1,163 @@
+---
+title: "Movement Features: Float, Fly, Sprint, Jump, and More"
+sidebarTitle: "Movement"
+description: "KCSH movement features let you override Roblox physics for your character — float, fly, sprint, slow walk, high jump, and sit with one-click toggles."
+---
+
+KCSH exposes six movement controls directly on its HUD panel. Every button is a toggle — clicking it once turns the feature on, clicking it again turns it off. Buttons display their current state in green (**on**) or red (**off**) so you always know what is active.
+
+---
+
+## Float
+
+**Button label:** `float`
+
+Float zeroes out workspace gravity and puts your humanoid into `PlatformStand` mode, causing your character to drift weightlessly in place.
+
+| State | `workspace.Gravity` | `Humanoid.PlatformStand` |
+|-------|---------------------|--------------------------|
+| On    | `0`                 | `true`                   |
+| Off   | Restored to original value (`gamegrav`) | `false` |
+
+The original gravity value is captured into `gamegrav` the moment the KCSH script loads, so toggling Float off always restores the exact gravity that was present when you executed the script — not a hard-coded value.
+
+---
+
+## Sit
+
+**Button label:** `sit`
+
+Forces your character's humanoid into or out of the sitting state.
+
+| State | `Humanoid.Sit` |
+|-------|---------------|
+| On    | `true`        |
+| Off   | `false`       |
+
+This is purely a humanoid-property toggle. Sitting in mid-air is valid — combine with Float for full levitation-pose control.
+
+---
+
+## Fly
+
+**Button label:** `fly`
+
+<Warning>
+  The original KCSH source contains a commented-out warning message: **"FLY HAS A 90% CHANCE OF GETTING YOU BANNED!!"** Games with server-side anti-cheat detect `BodyVelocity`/`BodyGyro` injection and will ban your account. Use fly on games without anti-cheat only.
+</Warning>
+
+Fly attaches a `BodyVelocity` and a `BodyGyro` to your `HumanoidRootPart`, giving you full 6-DoF movement under camera-relative keyboard control.
+
+### Physics objects created
+
+| Instance | Property | Value |
+|----------|----------|-------|
+| `BodyVelocity` | `MaxForce` | `Vector3(1e5, 1e5, 1e5)` |
+| `BodyGyro` | `MaxTorque` | `Vector3(1e5, 1e5, 1e5)` |
+
+Both instances are parented to `HumanoidRootPart` while flying and destroyed when fly is toggled off. On deactivation, `CanCollide` is also re-enabled on every `BasePart` in the character model (it is disabled every `RenderStepped` frame while flying to prevent collision glitches).
+
+`Humanoid.PlatformStand` is set to `true` while fly is active (mirrors Float behaviour) and returns to `false` on deactivation.
+
+### Speed constants
+
+| Mode | Speed |
+|------|-------|
+| Normal | `200` studs/s |
+| Slow (hold Shift) | `50` studs/s |
+| Acceleration lerp factor | `2` (applied per `deltaTime`) |
+
+### Keybinds
+
+| Key | Action |
+|-----|--------|
+| <kbd>W</kbd> | Move forward (along camera `LookVector`) |
+| <kbd>S</kbd> | Move backward (against camera `LookVector`) |
+| <kbd>A</kbd> | Strafe left (against camera `RightVector`) |
+| <kbd>D</kbd> | Strafe right (along camera `RightVector`) |
+| <kbd>E</kbd> | Move up |
+| <kbd>Q</kbd> | Move down |
+| <kbd>Left Shift</kbd> / <kbd>Right Shift</kbd> | Slow mode (speed drops to `50`) |
+
+### Fly control loop (source excerpt)
+
+```lua
+local speed = 200
+local slowSpeed = 50
+local acceleration = 2
+
+-- Inside RenderStepped:
+local camCF = workspace.CurrentCamera.CFrame
+local moveDirection = Vector3.new()
+
+if UIS:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + camCF.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - camCF.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - camCF.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + camCF.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.E) then moveDirection = moveDirection + Vector3.new(0,1,0) end
+if UIS:IsKeyDown(Enum.KeyCode.Q) then moveDirection = moveDirection - Vector3.new(0,1,0) end
+
+local currentSpeed = speed
+if UIS:IsKeyDown(Enum.KeyCode.LeftShift) or UIS:IsKeyDown(Enum.KeyCode.RightShift) then
+    currentSpeed = slowSpeed
+end
+
+if moveDirection.Magnitude > 0 then
+    moveDirection = moveDirection.Unit * currentSpeed
+    velocity = velocity:Lerp(moveDirection, acceleration * deltaTime)
+else
+    velocity = velocity:Lerp(Vector3.new(0,0,0), acceleration * deltaTime)
+end
+
+bodyVelocity.Velocity = velocity
+bodyGyro.CFrame = CFrame.new(humanoidRootPart.Position, humanoidRootPart.Position + camCF.LookVector)
+```
+
+---
+
+## Slow Walk
+
+**Button label:** `slow walk`
+
+Reduces your character's `WalkSpeed` to a crawl.
+
+| State | `Humanoid.WalkSpeed` |
+|-------|---------------------|
+| On    | `6`                 |
+| Off   | `16` (Roblox default) |
+
+<Note>
+  Sprint and Slow Walk both reset `WalkSpeed` to `16` when toggled off. They do **not** lock each other out — if you enable both simultaneously, whichever was toggled **last** wins. To avoid unexpected speeds, make sure only one is active at a time.
+</Note>
+
+---
+
+## Sprint
+
+**Button label:** `sprint`
+
+Sets `WalkSpeed` to a very high value for rapid traversal.
+
+| State | `Humanoid.WalkSpeed` |
+|-------|---------------------|
+| On    | `100`               |
+| Off   | `16` (Roblox default) |
+
+<Note>
+  Sprint and Slow Walk both reset `WalkSpeed` to `16` when toggled off. They do **not** lock each other out — if you enable both simultaneously, whichever was toggled **last** wins. To avoid unexpected speeds, make sure only one is active at a time.
+</Note>
+
+---
+
+## High Jump
+
+**Button label:** `high jump`
+
+Multiplies your character's jump height by overriding `JumpPower`.
+
+| State | `Humanoid.JumpPower` |
+|-------|---------------------|
+| On    | `200`               |
+| Off   | `50` (Roblox default) |
+
+`JumpPower` only applies to `R6` rigs. On `R15` rigs Roblox uses `JumpHeight` instead, so this toggle may have no effect on R15 characters depending on the game's humanoid configuration.

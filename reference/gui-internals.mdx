@@ -1,0 +1,178 @@
+---
+title: "KCSH GUI Architecture and Internal Structure"
+sidebarTitle: "GUI Internals"
+description: "A technical breakdown of how KCSH builds its ScreenGui, draggable frame, scrolling layout, and UI helper functions from Roblox instances."
+---
+
+KCSH constructs its entire UI programmatically using Roblox `Instance.new()` calls — there is no Roblox Studio `.rbxm` file or pre-built model involved. Understanding the instance tree helps if you want to fork the script or extend it with new buttons.
+
+## Instance Tree
+
+Every object is created at runtime and parented directly into `CoreGui` so that the GUI survives game resets and sits above all in-game UI (`DisplayOrder = 2147483647`).
+
+```
+CoreGui
+└── ScreenGui ("KCSH", DisplayOrder=2147483647, ResetOnSpawn=true)
+    └── Frame ("d", 300×312.5, 50% transparent white, 25px corner radius)
+        ├── UICorner (CornerRadius=0,25)
+        ├── UIPadding (10px all sides)
+        └── ScrollingFrame ("f", AutomaticCanvasSize=Y, ScrollBarThickness=0)
+            ├── UIListLayout (Horizontal, FillDirection, HorizontalFlex=Fill, Padding=10)
+            ├── TextLabel ("1") — title "kaladoos clientside hub"
+            ├── TextButton ("2") — float
+            ├── TextButton ("3") — sit
+            ├── TextButton ("4") — fly
+            ├── TextButton ("5") — slow walk
+            ├── TextButton ("6") — sprint
+            ├── TextButton ("7") — high jump
+            ├── TextButton ("8") — launch iy
+            ├── TextButton ("9") — super spin
+            ├── TextButton ("10") — reset
+            ├── TextButton ("11") — jorkin
+            ├── TextLabel ("98") — "Player Teleports"
+            └── Frame ("99") — player teleport buttons container
+                └── UIListLayout (Horizontal, HorizontalFlex=Fill)
+```
+
+The `ScrollingFrame` (`f`) uses `AutomaticCanvasSize = Enum.AutomaticSize.Y` so the canvas grows downward automatically as buttons are added. `ScrollBarThickness = 0` hides the scrollbar while still allowing scroll. The `UIListLayout` inside it uses `Wraps = true` and `FillDirection = Horizontal`, causing buttons to wrap onto new rows when the frame width is exceeded.
+
+The player teleport container (`Frame "99"`) shares the same wrapping horizontal layout, but is populated dynamically: one button per player currently in the server, updated live via `Players.PlayerAdded` and `Players.PlayerRemoving` events.
+
+## Helper Functions
+
+Two private helper functions — `maketext` and `makebutton` — are defined once and reused for every element in the scroll frame, keeping the UI construction code concise.
+
+### maketext(parent, text, size, name)
+
+Creates a `TextLabel` and parents it immediately. Used for section headers and the hub title.
+
+| Property | Value |
+|---|---|
+| `Text` | `text` argument |
+| `Size` | `UDim2.new(1, 0, 0, 50)` — full width, 50px tall |
+| `Name` | `name` argument |
+| `BackgroundTransparency` | `1` (invisible background) |
+| `BorderSizePixel` | `0` |
+| `TextSize` | `size` argument |
+| `Font` | `Enum.Font.BuilderSans` |
+| `RichText` | `true` |
+
+```lua
+local function maketext(parent, text, size, name)
+	local b = Instance.new("TextLabel")
+	b.Text = text
+	b.Size = UDim2.new(1, 0, 0, 50)
+	b.Name = name
+	b.BackgroundTransparency = 1
+	b.BorderSizePixel = 0
+	b.TextSize = size
+	b.Font = Enum.Font.BuilderSans
+	b.RichText = true
+	b.Parent = parent
+end
+```
+
+### makebutton(parent, text, name)
+
+Creates a `TextButton` with a rounded background and parents it immediately. Also adds a child `UICorner` for the 15px radius. Used for every interactive feature toggle and the player teleport buttons.
+
+| Property | Value |
+|---|---|
+| `Text` | `text` argument |
+| `Size` | `UDim2.new(0, 100, 0, 50)` — fixed 100×50px |
+| `Name` | `name` argument |
+| `BackgroundTransparency` | `0.5` |
+| `BackgroundColor3` | `Color3.fromRGB(255, 255, 255)` (white) |
+| `BorderSizePixel` | `0` |
+| `TextSize` | `20` |
+| `Font` | `Enum.Font.BuilderSans` |
+| `RichText` | `true` |
+| `UICorner.CornerRadius` | `UDim.new(0, 15)` |
+
+```lua
+local function makebutton(parent, text, name)
+	local b = Instance.new("TextButton")
+	b.Text = text
+	b.Size = UDim2.new(0, 100, 0, 50)
+	b.Name = name
+	b.BackgroundTransparency = 0.5
+	b.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	b.BorderSizePixel = 0
+	b.TextSize = 20
+	b.Font = Enum.Font.BuilderSans
+	b.RichText = true
+	b.Parent = parent
+	local c = Instance.new("UICorner")
+	c.Parent = b
+	c.CornerRadius = UDim.new(0, 15)
+end
+```
+
+## Dragging System
+
+The main frame (`d`) is draggable via a three-variable state machine: `dragging` (boolean), `dragStart` (the cursor position when the drag began), and `startPos` (the frame's `Position` when the drag began).
+
+**Drag start** — `d.InputBegan` fires when any input hits the frame. If the input type is `MouseButton1`, `dragging` is set to `true`, and both reference positions are captured. A secondary `input.Changed` listener resets `dragging` to `false` when the button is released.
+
+**Drag move** — `uis.InputChanged` fires globally for every input change. When `dragging` is `true` and the input type is `MouseMovement`, the cursor delta is computed and a `TweenService` tween smoothly animates the frame to its new position over 0.3 seconds using the `Quad` easing style with `Out` direction.
+
+```lua
+local ts = game:GetService("TweenService")
+local uis = game:GetService("UserInputService")
+local dragging = false
+local dragStart
+local startPos
+
+d.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = d.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+uis.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		ts:Create(d, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		}):Play()
+	end
+end)
+```
+
+The tween approach means the frame glides into position rather than snapping, giving it a polished feel even though the underlying logic is straightforward.
+
+## RichText Status Colors
+
+All toggle buttons use Roblox's `RichText` markup to embed a colored state indicator directly inside the button label. Because `RichText = true` is set on every button created by `makebutton`, standard HTML-like font tags are interpreted by the `TextButton` renderer.
+
+| State | Tag | Color |
+|---|---|---|
+| Off | `<font color='#a63131'><b>off</b></font>` | Red `#a63131` |
+| On | `<font color='#39a637'><b>on</b></font>` | Green `#39a637` |
+
+When a button is created, its initial text already contains the "off" tag. On click, the handler swaps the entire `.Text` string to the "on" variant, and back again on the next click:
+
+```lua
+-- Initial state (passed to makebutton)
+"float <font color='#a63131'><b>off</b></font>"
+
+-- After first click (set inside MouseButton1Click handler)
+f["2"].Text = "float <font color='#39a637'><b>on</b></font>"
+
+-- After second click (toggled back)
+f["2"].Text = "float <font color='#a63131'><b>off</b></font>"
+```
+
+This pattern is identical across every toggle button (float, sit, fly, slow walk, sprint, high jump), making it easy to extend: create a button with `makebutton`, track a boolean, and swap the `.Text` string in a `MouseButton1Click` handler.

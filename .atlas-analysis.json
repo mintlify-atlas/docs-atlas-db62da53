@@ -1,0 +1,58 @@
+{
+  "projectType": "general",
+  "projectName": "KCSH",
+  "projectDescription": "Kaladoo's Clientside Script Hub — a Roblox Lua script that injects a draggable GUI with movement exploits and player utilities into any Roblox game via a loadstring executor.",
+  "theme": "palm",
+  "primaryColor": "#5b3fa6",
+  "lightColor": "#ede9f7",
+  "darkColor": "#2d1f55",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": ["introduction", "quickstart"]
+      },
+      {
+        "group": "Features",
+        "pages": [
+          "features/movement",
+          "features/player-teleport",
+          "features/extras"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/gui-internals",
+          "reference/configuration"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Draggable, transparent ScreenGui panel with rounded corners",
+    "Float toggle — zeroes workspace gravity and enables PlatformStand",
+    "Fly mode with WASD/QE controls, BodyVelocity/BodyGyro physics, Shift to slow down",
+    "Sprint (WalkSpeed 100) and Slow Walk (WalkSpeed 6) toggles",
+    "High Jump (JumpPower 200) toggle",
+    "Sit toggle via Humanoid.Sit",
+    "Super Spin — instant angular velocity trick",
+    "Player Teleport list that auto-updates as players join/leave",
+    "Infinite Yield loader shortcut",
+    "Jorkin easter-egg tool with R6/R15 animation support"
+  ],
+  "publicApiSurface": [
+    "loadstring(game:HttpGet('https://raw.githubusercontent.com/Kaladoo2/KCSH/refs/heads/main/source.lua'))()",
+    "float toggle button",
+    "sit toggle button",
+    "fly toggle button (WASD + Q/E + Shift)",
+    "slow walk toggle button",
+    "sprint toggle button",
+    "high jump toggle button",
+    "launch Infinite Yield button",
+    "super spin button",
+    "reset character button",
+    "jorkin tool button",
+    "player teleport buttons (auto-populated)"
+  ]
+}

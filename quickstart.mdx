@@ -1,47 +1,56 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with KCSH in Your Roblox Session"
+sidebarTitle: "Quickstart"
+description: "Learn how to execute KCSH in any Roblox exploit executor and open the clientside hub panel in under a minute."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+KCSH requires no installation or configuration — the entire hub is delivered by a single `loadstring` call that fetches and executes the latest `source.lua` directly from GitHub. There are no files to download, no folders to set up, and no settings to tweak before you start. As long as your executor can reach the internet and run `loadstring`, you are ready to go.
 
 ## Prerequisites
 
-Before you begin, you must have:
+<Note>
+  Before executing KCSH, make sure you have:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+  - A supported Roblox exploit executor with `loadstring` and `game:HttpGet` enabled (e.g. **Synapse X**, **KRNL**, **Fluxus**, or any equivalent level-7 executor).
+  - An active Roblox game session — KCSH must be injected while you are inside a running game.
+</Note>
 
-## Get started
+## Execute KCSH
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Join a Roblox game">
+    Open the Roblox client and join any game. KCSH is game-agnostic — it works in any title because all of its features operate on client-side humanoid and workspace properties.
+  </Step>
+  <Step title="Open your executor">
+    Launch your exploit executor and attach it to the running Roblox process. Wait for the executor to confirm a successful injection before proceeding.
+  </Step>
+  <Step title="Paste the loader">
+    Copy the one-liner below and paste it into your executor's script input box:
 
-    ```bash
-    npm install your-package
+    ```lua source.lua
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Kaladoo2/KCSH/refs/heads/main/source.lua"))()
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
-
-    ```bash
-    your-cli init
-    ```
+  <Step title="Execute">
+    Click **Execute** (or your executor's equivalent button) to run the script. KCSH intentionally waits before building the GUI — first a `task.wait(0.5)` pause while it resolves the local player and workspace character, then a second `task.wait(1)` pause after the `ScreenGui` is created — so expect roughly **1.5 seconds** before the panel appears on screen.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
-
-    ```bash
-    your-cli start
-    ```
+  <Step title="Interact with the panel">
+    The semi-transparent white panel appears in the center of the screen. Click any button to toggle that feature on or off. To reposition the hub, click and drag anywhere on the panel background — it will smoothly tween to follow your cursor using `TweenService` with a 0.3-second `Quad` ease-out.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## What happens on execution
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+When the script runs, it first performs a **cleanup pass**: it calls `pcall` to search `game.CoreGui` for any existing child named `"KCSH"` and destroys it if found, preventing duplicate panels from stacking up if you execute the loader more than once. It then creates a fresh `ScreenGui` with `ResetOnSpawn = true`, sets its `DisplayOrder` to `2147483647` so it always renders above every other GUI, and parents it to `game.CoreGui`.
+
+After the second `task.wait`, the script builds the main draggable frame: a `300 × 312.5` px `Frame` with 50 % background transparency, a white fill color (`RGB 255, 255, 255`), and a `UICorner` with a 25 px corner radius for the rounded look. The frame uses `TweenService` + `UserInputService` events to implement smooth drag-to-reposition behavior.
+
+Inside the frame lives a `ScrollingFrame` (invisible scrollbar, automatic canvas height) with a horizontal-wrapping `UIListLayout`. The script populates this scrolling area by calling `makebutton()` for each feature toggle and `maketext()` for section headers, building the full button list from top to bottom: the hub title label, all movement feature buttons, the extras buttons, a "Player Teleports" section label, and then a dynamically populated sub-frame of per-player teleport buttons.
+
+## Toggling features
+
+Every feature button uses Roblox's **RichText** system to display a colored status indicator inline with the button label. When a feature is **disabled**, the status reads <font color="#a63131">**off**</font> rendered in red (`#a63131`). When a feature is **enabled**, it switches to <font color="#39a637">**on**</font> rendered in green (`#39a637`). The button text is updated directly on each click by reassigning the button's `.Text` property — no separate status label is needed.
+
+<Tip>
+  If the KCSH panel disappears after your character respawns, you will need to re-execute the loader script. This is expected behavior: the `ScreenGui` is created with `ResetOnSpawn = true`, which tells Roblox to automatically destroy the GUI whenever the local player's character resets. Simply paste and execute the `loadstring` one-liner again to bring the panel back.
 </Tip>

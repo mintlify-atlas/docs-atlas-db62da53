@@ -1,0 +1,74 @@
+---
+title: "KCSH: Kaladoo's Clientside Script Hub for Roblox"
+sidebarTitle: "Introduction"
+description: "KCSH is a single-file Roblox Lua exploit script that injects a draggable GUI hub with movement hacks, teleports, and extras into any game session."
+---
+
+KCSH (Kaladoo's Clientside Script Hub) is a single-file Roblox Lua exploit script designed to be dropped into any executor with a single `loadstring` call. Once executed, it injects a sleek, semi-transparent GUI panel directly into your game session — no installation, no configuration, no external dependencies beyond the loader line itself. The panel is a rounded, 50 % opaque white frame that floats in the center of your screen, contains a scrollable list of toggle buttons and section labels, and can be freely repositioned by clicking and dragging anywhere on its background.
+
+## What is KCSH?
+
+KCSH is a Roblox Lua exploit script executed via the standard one-liner pattern:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Kaladoo2/KCSH/refs/heads/main/source.lua"))()
+```
+
+When run, the script fetches the latest `source.lua` directly from GitHub and executes it inside the Roblox client. Internally it creates a `ScreenGui` instance named `"KCSH"`, parents it to `game.CoreGui`, and sets `DisplayOrder = 2147483647` — the maximum possible value — so the panel always renders on top of every other GUI element in every game. Before creating the new GUI, the script first checks for and destroys any pre-existing `KCSH` instance in `CoreGui`, preventing duplicate panels if you execute it more than once.
+
+## Feature Overview
+
+<CardGroup cols={2}>
+  <Card title="Float" icon="feather" href="/features/movement">
+    Zeroes out `workspace.Gravity` and enables `PlatformStand` on your humanoid, making your character hover weightlessly in place.
+  </Card>
+  <Card title="Fly" icon="plane" href="/features/movement">
+    Attaches `BodyVelocity` and `BodyGyro` to your `HumanoidRootPart` and steers them with WASD + Q/E relative to the camera. Hold Shift to slow down.
+  </Card>
+  <Card title="Sit" icon="chair" href="/features/movement">
+    Toggles `Humanoid.Sit` to force your character into or out of the sitting pose instantly.
+  </Card>
+  <Card title="Slow Walk" icon="person-walking" href="/features/movement">
+    Sets `Humanoid.WalkSpeed` to `6` (down from the default `16`) for a creeping movement pace.
+  </Card>
+  <Card title="Sprint" icon="person-running" href="/features/movement">
+    Raises `Humanoid.WalkSpeed` to `100` for a rapid sprint far beyond the default movement speed.
+  </Card>
+  <Card title="High Jump" icon="arrow-up" href="/features/movement">
+    Boosts `Humanoid.JumpPower` to `200` (default is `50`) so your character launches dramatically into the air.
+  </Card>
+  <Card title="Player Teleport" icon="location-arrow" href="/features/player-teleport">
+    Dynamically lists every player currently in the server. Clicking a player's button snaps your `HumanoidRootPart.CFrame` to theirs instantly. Buttons are added and removed as players join or leave.
+  </Card>
+  <Card title="Super Spin" icon="rotate" href="/features/extras">
+    Kicks off an infinite loop that pivots your character by an astronomically large yaw angle every frame, causing a violent visual spin effect.
+  </Card>
+  <Card title="Launch Infinite Yield" icon="terminal" href="/features/extras">
+    Fetches and executes the popular Infinite Yield admin script (`EdgeIY/infiniteyield`) via its own `loadstring` call, layering a full server-command suite on top of KCSH.
+  </Card>
+  <Card title="Reset" icon="arrow-rotate-left" href="/features/extras">
+    Records your current position, sets `Humanoid.Health` to `0` to kill the character, waits for the respawn timer, then teleports you back to where you were before dying.
+  </Card>
+  <Card title="Jorkin" icon="hand" href="/features/extras">
+    Equips a tool named `"jorkin de peanits"` to your backpack and plays a looping jerk animation (`rbxassetid://72042024` for R6, `rbxassetid://698251653` for R15) whenever the tool is held.
+  </Card>
+</CardGroup>
+
+## Requirements
+
+<Note>
+  To run KCSH you need:
+
+  - A Roblox exploit executor that supports both `loadstring` and `game:HttpGet` (e.g. **Synapse X**, **KRNL**, **Fluxus**, or any equivalent level-7 executor).
+  - An active Roblox game session — the script must be injected while you are inside a running game, not from the Roblox home screen.
+</Note>
+
+## Safety & Risk
+
+<Warning>
+  **Fly carries a very high ban risk.** The KCSH source code itself contains a commented-out warning that reads:
+
+  > `"FLY HAS A 90% CHANCE OF GETTING YOU BANNED!!"`
+
+  This warning was present in an earlier revision of the script and reflects how detectable server-side BodyVelocity manipulation is in most games. Other features (Slow Walk, Sit, Float, High Jump, Sprint) modify humanoid properties locally and vary in detection risk depending on the game's anti-cheat. Features like Super Spin and Jorkin are cosmetic/client-side and carry lower risk, though no exploit is ever fully safe. **Use KCSH entirely at your own discretion and risk.**
+</Warning>

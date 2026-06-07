@@ -1,0 +1,115 @@
+---
+title: "Extra Features: Spin, Infinite Yield, Jorkin, and Reset"
+sidebarTitle: "Extras"
+description: "KCSH extras include a Super Spin gag, Infinite Yield loader shortcut, character reset with position restore, and the Jorkin easter-egg tool."
+---
+
+The four extra buttons in KCSH sit below the movement controls and cover a mix of utility and comedy. None of them are movement toggles — each does something distinct (and in one case, irreversible) when clicked.
+
+---
+
+## Super Spin
+
+**Button label:** `super spin`
+
+<Warning>
+  Super Spin runs an **infinite loop with no off-switch**. Once activated, the only ways to stop it are to re-execute the KCSH script (which recreates the GUI) or leave the game entirely. Do not click this button unless you intend to commit.
+</Warning>
+
+Super Spin calls `character:PivotTo()` every `task.wait()` with an astronomically large radian angle:
+
+```lua
+f["9"].MouseButton1Click:Connect(function()
+    while true do
+        local character = game.Players.LocalPlayer.Character
+        character:PivotTo(character:GetPivot() * CFrame.Angles(0, math.rad(9000000000000000000000000000000000000000), 0))
+        task.wait()
+    end
+end)
+```
+
+`math.rad(9000000000000000000000000000000000000000)` is a number so large that floating-point precision collapses it into an effectively random but enormous rotation each frame, producing a violently rapid spin effect. Because `task.wait()` yields for only one frame, the loop fires as fast as the engine allows.
+
+The result is purely visual on the client side — other players will not see the spin unless the game replicates `PivotTo` calls to the server.
+
+---
+
+## Launch Infinite Yield
+
+**Button label:** `launch iy`
+
+Executes the popular **Infinite Yield** admin command script directly from its GitHub source:
+
+```lua
+f["8"].MouseButton1Click:Connect(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+end)
+```
+
+Clicking the button fetches the latest version of Infinite Yield at that moment and runs it in your executor environment. The Infinite Yield chat GUI will appear in your game session with its full command set available.
+
+<Note>
+  For the full list of Infinite Yield commands and documentation, visit the [Infinite Yield GitHub repository](https://github.com/EdgeIY/infiniteyield). An active internet connection and an executor that supports `HttpGet` are required.
+</Note>
+
+---
+
+## Reset
+
+**Button label:** `reset`
+
+The Reset button kills your character and then teleports you back to where you were standing before you died — handy for games that have a death effect you want to trigger without losing your map position.
+
+The logic saves your current `HumanoidRootPart.CFrame`, sets `Humanoid.Health = 0` to force death, waits for respawn (using `pplayer.Parent.RespawnTime + 0.2` seconds as the delay), then writes the saved `CFrame` back.
+
+```lua
+-- Connected to f["9"] in source (see known issue below)
+local oldp = wplayer.HumanoidRootPart.CFrame
+task.wait(0.1)
+wplayer.Humanoid.Health = 0
+task.wait(pplayer.Parent.RespawnTime + 0.2)
+wplayer.HumanoidRootPart.CFrame = oldp.CFrame
+```
+
+<Warning>
+  **Known bug:** In the current source, the `MouseButton1Click` handler for the Reset button (`f["10"]`) is mistakenly connected to `f["9"]` (the Super Spin button) instead. The same mistake affects the Jorkin button (`f["11"]`). In practice, `f["9"]` has **three** separate `MouseButton1Click` connections (Super Spin, Reset, and Jorkin) all firing when Super Spin is clicked, and the Reset and Jorkin buttons (`f["10"]` and `f["11"]`) **never fire**. This is a copy-paste bug in the source — the reset and jorkin features are effectively inaccessible without patching the script.
+</Warning>
+
+---
+
+## Jorkin
+
+**Button label:** `jorkin`
+
+<Tip>
+  Jorkin is a purely cosmetic easter egg. It has no gameplay effect whatsoever — it just makes your character dance. Enjoy responsibly.
+</Tip>
+
+Jorkin creates a `Tool` named **"jorkin de peanits"** in your local `Backpack`. Equipping the tool starts a looping animation — the specific animation asset depends on your character rig type:
+
+| Rig Type | Animation ID | Playback Speed | Loop Start (`TimePosition`) |
+|----------|-------------|----------------|-----------------------------|
+| R6       | `rbxassetid://72042024`  | `0.65` | `0.6` |
+| R15      | `rbxassetid://698251653` | `0.7`  | `0.6` |
+
+The animation is loaded via `Humanoid:LoadAnimation()` and plays on a loop. Each iteration plays the track, adjusts its speed with `AdjustSpeed`, seeks to `TimePosition = 0.6` to skip the intro frames, waits until the track reaches near its end (`0.65` for R6, `0.7` for R15), then stops and reloads for the next loop.
+
+The tomfoolery stops automatically when:
+- The tool is **unequipped**
+- The humanoid **dies**
+
+```lua
+local tool = Instance.new("Tool")
+tool.Name = "jorkin de peanits"
+tool.ToolTip = 'in the stripped club. straight up "jorking it" . and by "it" , haha, well. let\'s justr say. My peanits.'
+tool.RequiresHandle = false
+tool.Parent = pplayer.Backpack
+
+tool.Equipped:Connect(function() jorkin = true end)
+tool.Unequipped:Connect(stopTomfoolery)
+wplayer.Humanoid.Died:Connect(stopTomfoolery)
+```
+
+<Warning>
+  Due to the **known bug** described in the Reset section above, the Jorkin button (`f["11"]`) never actually fires — its handler is connected to `f["9"]` alongside Super Spin and Reset. The Jorkin tool will not appear in your Backpack unless the source is patched to use `f["11"].MouseButton1Click` for this handler.
+</Warning>

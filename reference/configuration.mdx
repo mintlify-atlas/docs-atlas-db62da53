@@ -1,0 +1,90 @@
+---
+title: "KCSH Configuration and Tunable Variables"
+sidebarTitle: "Configuration"
+description: "Hard-coded speed, physics, and timing values in KCSH source.lua that can be changed to customize movement behavior when forking the script."
+---
+
+KCSH does not expose a configuration file or settings API. All tuneable values are Lua variables declared near the top of the relevant feature block in `source.lua`. To change them, fork the script and edit the values directly before hosting or executing it.
+
+## Fly Settings
+
+The fly system uses three variables to control how the character moves through the air. They are declared immediately before the `RenderStepped` loop that drives the `BodyVelocity` instance.
+
+| Variable | Default | Description |
+|---|---|---|
+| `speed` | `200` | Normal fly speed in studs per second |
+| `slowSpeed` | `50` | Speed applied when Left Shift or Right Shift is held |
+| `acceleration` | `2` | Lerp factor applied per frame — higher values feel snappier, lower values feel floaty |
+
+```lua source.lua
+local speed = 200
+local slowSpeed = 50
+local acceleration = 2
+```
+
+<Tip>
+  The `acceleration` value is multiplied by `deltaTime` inside the `RenderStepped` callback, so it is frame-rate independent. Doubling it from `2` to `4` makes the character reach full speed roughly twice as fast regardless of FPS.
+</Tip>
+
+## Walk Speed Settings
+
+Slow walk and sprint both modify `Humanoid.WalkSpeed` on toggle. When either feature is turned off, the walk speed is restored to the Roblox default of `16`.
+
+| Feature | WalkSpeed Value |
+|---|---|
+| Default (off) | `16` |
+| Slow Walk (on) | `6` |
+| Sprint (on) | `100` |
+
+## Jump Settings
+
+High jump modifies `Humanoid.JumpPower` on toggle. Turning the feature off restores the Roblox default.
+
+| Feature | JumpPower Value |
+|---|---|
+| Default (off) | `50` |
+| High Jump (on) | `200` |
+
+## Timing
+
+KCSH uses two `task.wait()` calls during startup to ensure Roblox services and the player character are fully available before the script tries to reference them.
+
+| Variable | Value | Purpose |
+|---|---|---|
+| Initial wait | `0.5s` | `task.wait(0.5)` — lets `Players.LocalPlayer` and the character model finish loading before `pplayer` and `wplayer` are assigned |
+| GUI wait | `1.0s` | `task.wait(1)` — pauses before building the UI so helper functions and services are registered cleanly after the initial variable setup |
+
+Reducing either value risks `nil` reference errors on slower connections or lower-end devices. Increasing them simply delays the GUI from appearing.
+
+## Forking the Script
+
+<Steps>
+  <Step title="Open the raw source">
+    Navigate to `https://raw.githubusercontent.com/Kaladoo2/KCSH/refs/heads/main/source.lua` in a browser or text editor to get the plain Lua source.
+  </Step>
+  <Step title="Edit the values you want to change">
+    Find the variable you want to modify and update it. For example, to increase fly speed:
+    ```lua
+    local speed = 400
+    ```
+  </Step>
+  <Step title="Host your modified version">
+    Commit your edited file to a GitHub repository and copy the raw URL (e.g. `https://raw.githubusercontent.com/yourname/your-fork/main/source.lua`), or paste the script directly into your executor's script editor.
+  </Step>
+  <Step title="Run your fork">
+    Use `loadstring` to execute from a raw URL:
+    ```lua
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/yourname/your-fork/main/source.lua"))()
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The very first line of `source.lua` contains a commented-out `loadstring` call:
+
+  ```lua
+  -- loadstring(game:HttpGet("https://raw.githubusercontent.com/Kaladoo2/KCSH/refs/heads/main/source.lua"))()
+  ```
+
+  This is intentional. It is left as a convenience reminder showing the canonical URL to load the script from an executor — it is not meant to be self-executing. If the comment were active, the script would recursively load itself in an infinite loop.
+</Note>
